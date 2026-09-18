@@ -87,6 +87,8 @@ class Config:
     browserless_debug_url: str = ""
     state_file_path: str = "state.json"
     check_interval_minutes: Optional[float] = None
+    browserless_host: str = ""
+    browserless_port: int = 3000
 
     def safe_summary(self) -> Dict[str, Any]:
         """Возвращает безопасное представление конфигурации без секретов."""
@@ -95,7 +97,11 @@ class Config:
             if self.check_interval_minutes is not None
             else f"{self.round_delay_min / 60:.1f}–{self.round_delay_max / 60:.1f} мин"
         )
+        server_display = self.browserless_host or (
+            self.browserless_ws.split("?")[0].split("/")[2] if "//" in self.browserless_ws else self.browserless_ws
+        )
         return {
+            "browserless_server": server_display,
             "browserless_ws": mask_secret(self.browserless_ws, 12),
             "openai_api_key": mask_secret(self.openai_api_key, 7),
             "tg_bot_token": mask_secret(self.tg_bot_token, 8),
@@ -132,7 +138,34 @@ def load_config(env_file: Optional[str] = ".env", exit_on_error: bool = False) -
             missing.append(key)
         return val
 
-    browserless_ws = get_req("BROWSERLESS_WS")
+    # Адрес сервера Browserless: либо BROWSERLESS_HOST (+ опционально PORT, TOKEN, SECURE), либо полный BROWSERLESS_WS
+    browserless_ws = os.getenv("BROWSERLESS_WS", "").strip()
+    browserless_host = os.getenv("BROWSERLESS_HOST", "").strip()
+    browserless_port_raw = os.getenv("BROWSERLESS_PORT", "3000").strip()
+    browserless_token = os.getenv("BROWSERLESS_TOKEN", "").strip()
+    browserless_secure = os.getenv("BROWSERLESS_SECURE", "false").lower() in ("true", "1", "yes")
+
+    try:
+        browserless_port = int(browserless_port_raw)
+    except ValueError:
+        browserless_port = 3000
+
+    if not browserless_ws:
+        if browserless_host:
+            proto = "wss" if browserless_secure else "ws"
+            token_query = f"?token={browserless_token}&timeout=86400000" if browserless_token else "?timeout=86400000"
+            browserless_ws = f"{proto}://{browserless_host}:{browserless_port}/chromium{token_query}"
+        else:
+            missing.append("BROWSERLESS_WS (или BROWSERLESS_HOST)")
+    elif not browserless_host:
+        # Извлекаем хост из URL для информативного отображения
+        try:
+            if "//" in browserless_ws:
+                netloc = browserless_ws.split("//", 1)[1].split("/", 1)[0].split("?")[0]
+                browserless_host = netloc.split(":")[0]
+        except Exception:
+            pass
+
     openai_api_key = get_req("OPENAI_API_KEY")
     tg_bot_token = get_req("TG_BOT_TOKEN")
     tg_chat_ids_raw = get_req("TG_CHAT_IDS")
@@ -256,4 +289,6 @@ def load_config(env_file: Optional[str] = ".env", exit_on_error: bool = False) -
         browserless_debug_url=browserless_debug_url,
         state_file_path=state_file_path,
         check_interval_minutes=check_interval_minutes,
+        browserless_host=browserless_host,
+        browserless_port=browserless_port,
     )

@@ -91,3 +91,20 @@ def test_load_config_check_interval_minutes(monkeypatch):
     summary = cfg.safe_summary()
     assert summary["check_interval"] == "10.0 мин"
 
+
+def test_load_config_browserless_host(monkeypatch):
+    env = get_valid_env()
+    del env["BROWSERLESS_WS"]
+    env["BROWSERLESS_HOST"] = "my-browserless.internal"
+    env["BROWSERLESS_PORT"] = "3001"
+    env["BROWSERLESS_TOKEN"] = "token123"
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
+
+    cfg = load_config(env_file=None)
+    assert "ws://my-browserless.internal:3001/chromium?token=token123" in cfg.browserless_ws
+    assert cfg.browserless_host == "my-browserless.internal"
+    assert cfg.browserless_port == 3001
+    assert cfg.safe_summary()["browserless_server"] == "my-browserless.internal"
+
+
