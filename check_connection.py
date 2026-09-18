@@ -68,46 +68,15 @@ def main():
         default="",
         help="WebSocket URL Browserless (по умолчанию берется BROWSERLESS_WS из .env)"
     )
-    parser.add_argument(
-        "--host",
-        type=str,
-        default="",
-        help="Хост сервера Browserless (например, localhost или browserless)"
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=3000,
-        help="Порт сервера Browserless (по умолчанию 3000)"
-    )
-    parser.add_argument(
-        "--token",
-        type=str,
-        default="",
-        help="Токен авторизации Browserless"
-    )
     args = parser.parse_args()
 
     load_env_file(".env")
-
     ws_url = args.ws or os.getenv("BROWSERLESS_WS", "").strip()
-    if not ws_url:
-        host = args.host or os.getenv("BROWSERLESS_HOST", "").strip()
-        port = args.port or int(os.getenv("BROWSERLESS_PORT", "3000"))
-        token = args.token or os.getenv("BROWSERLESS_TOKEN", "").strip()
-        is_secure = os.getenv("BROWSERLESS_SECURE", "false").lower() in ("true", "1", "yes")
-
-        if host:
-            proto = "wss" if is_secure else "ws"
-            token_query = f"?token={token}&timeout=86400000" if token else "?timeout=86400000"
-            ws_url = f"{proto}://{host}:{port}/chromium{token_query}"
 
     if not ws_url:
         print(
-            "❌ Ошибка: Не указан адрес Browserless!\n"
-            "Задайте BROWSERLESS_HOST или BROWSERLESS_WS в .env, либо передайте аргументы:\n"
-            "    python check_connection.py --host localhost --port 3000 --token mytoken\n"
-            "    python check_connection.py --ws 'ws://localhost:3000/chromium?token=...'",
+            "❌ Ошибка: Не указан WebSocket URL для Browserless!\n"
+            "Задайте переменную BROWSERLESS_WS в .env или передайте аргумент --ws 'ws://...'",
             file=sys.stderr
         )
         sys.exit(1)

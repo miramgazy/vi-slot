@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import random
-import time
 from typing import List, Optional, Tuple
 
 from playwright.async_api import Browser, BrowserContext, Page, Playwright
@@ -62,67 +61,31 @@ def sound_alert() -> None:
 
 async def connect_to_browserless(playwright: Playwright, ws_url: str) -> Browser:
     """
-    Подключается к Browserless с подробным логированием этапов и времени отклика.
+    Подключается к browserless.
     Сначала пробует connect_over_cdp (стандартный для Browserless Chromium),
     при ошибке протокола выполняет fallback на chromium.connect.
     """
-    clean_endpoint = ws_url.split("?")[0]
-    has_token = "token=" in ws_url
-    logger.info(
-        "[BROWSER] 🔌 Инициализация подключения к Browserless: %s (токен: %s, таймаут: 30с)...",
-        clean_endpoint, "передан" if has_token else "не передан"
-    )
-    t_start = time.time()
+    logger.info("[BROWSER] Подключение к Browserless: %s ...", ws_url.split("?")[0])
 
-    # Если URL прямо указывает на playwright endpoint (/playwright)
+    # Если URL прямо указывает на playwright endpoint
     if "/playwright" in ws_url:
-        logger.info("[BROWSER] Обнаружен /playwright endpoint. Подключение через chromium.connect...")
         try:
-            browser = await playwright.chromium.connect(ws_url, timeout=30000)
-            elapsed = time.time() - t_start
-            logger.info(
-                "[BROWSER] ✅ Успешно подключено к Browserless (chromium.connect) за %.2fс! Chromium v%s",
-                elapsed, browser.version
-            )
-            return browser
+            return await playwright.chromium.connect(ws_url, timeout=30000)
         except Exception as e:
-            logger.warning("[BROWSER] ⚠️ Ошибка подключения через chromium.connect: %s. Пробуем CDP...", e)
+            logger.warning("[BROWSER] Ошибка подключения через chromium.connect: %s. Пробуем CDP...", e)
 
     try:
-        logger.info("[BROWSER] 🌐 Отправка CDP WebSocket рукопожатия к %s ...", clean_endpoint)
         browser = await playwright.chromium.connect_over_cdp(ws_url, timeout=30000)
-        elapsed = time.time() - t_start
-        logger.info(
-            "[BROWSER] ✅ Успешное подключение к Browserless через CDP за %.2fс! Версия Chromium: %s (активных контекстов: %d)",
-            elapsed, browser.version, len(browser.contexts)
-        )
+        logger.info("[BROWSER] Успешно подключено через connect_over_cdp.")
         return browser
     except Exception as cdp_err:
-        elapsed_cdp = time.time() - t_start
-        logger.warning(
-            "[BROWSER] ⚠️ Не удалось подключиться через CDP за %.2fс: %s. Выполняем fallback на chromium.connect...",
-            elapsed_cdp, cdp_err
-        )
+        logger.warning("[BROWSER] connect_over_cdp завершился с ошибкой: %s. Пробуем chromium.connect...", cdp_err)
         try:
-            t_conn = time.time()
             browser = await playwright.chromium.connect(ws_url, timeout=30000)
-            elapsed = time.time() - t_conn
-            logger.info(
-                "[BROWSER] ✅ Успешно подключено через chromium.connect за %.2fс! Версия Chromium: %s",
-                elapsed, browser.version
-            )
+            logger.info("[BROWSER] Успешно подключено через chromium.connect.")
             return browser
         except Exception as conn_err:
-            logger.error("=" * 60)
-            logger.error("[BROWSER] ❌ КРИТИЧЕСКАЯ ОШИБКА ПОДКЛЮЧЕНИЯ К BROWSERLESS!")
-            logger.error("[BROWSER] Адрес сервера: %s", clean_endpoint)
-            logger.error("[BROWSER] Ошибка CDP: %s", cdp_err)
-            logger.error("[BROWSER] Ошибка Playwright Connect: %s", conn_err)
-            logger.error(
-                "[BROWSER] 💡 Диагностика: убедитесь, что сервис Browserless запущен, "
-                "порт доступен и переменная TOKEN совпадает в обоих сервисах."
-            )
-            logger.error("=" * 60)
+            logger.error("[BROWSER] Не удалось подключиться к Browserless: CDP: %s, Connect: %s", cdp_err, conn_err)
             raise conn_err
 
 

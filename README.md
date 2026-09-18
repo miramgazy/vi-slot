@@ -49,11 +49,7 @@ visa-slot/
 
 | Переменная | Обязательная | По умолчанию | Описание |
 |---|:---:|:---:|---|
-| `BROWSERLESS_HOST` | **Да** (или `BROWSERLESS_WS`) | `browserless` | Хост/IP сервера Browserless (например, `browserless` или `localhost`) |
-| `BROWSERLESS_PORT` | Нет | `3000` | Порт сервера Browserless |
-| `BROWSERLESS_TOKEN` | Нет | `vfs_secret_token_123` | Токен авторизации Browserless |
-| `BROWSERLESS_SECURE` | Нет | `false` | Использовать ли `wss://` вместо `ws://` |
-| `BROWSERLESS_WS` | Опционально | — | Полный WebSocket URL (если не используются `BROWSERLESS_HOST` и `PORT`) |
+| `BROWSERLESS_WS` | **Да** | — | WebSocket URL подключения к Browserless (например, `ws://browserless:3000/chromium?token=SECRET&timeout=86400000`) |
 | `OPENAI_API_KEY` | **Да** | — | API-ключ OpenAI для анализа страницы через GPT-4o-mini |
 | `TG_BOT_TOKEN` | **Да** | — | Токен Telegram-бота от @BotFather |
 | `TG_CHAT_IDS` | **Да** | — | Список ID чатов Telegram через запятую (`12345678,98765432`) |
