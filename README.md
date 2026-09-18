@@ -87,6 +87,23 @@ visa-slot/
 
 ## Пошаговое развёртывание в Coolify
 
+### Способ 1: Всё в одном через Docker Compose (Рекомендуемый)
+Самый простой и надёжный способ — развернуть бот и Browserless в едином стеке `docker-compose.yml`:
+
+1. В Coolify нажмите **+ Add Resource** -> **Docker Compose** -> **From Git Repository**.
+2. Укажите репозиторий: `https://github.com/miramgazy/vi-slot.git` (ветка `main`).
+3. В **Environment Variables** задайте переменные:
+   - `BROWSERLESS_TOKEN` — секретный токен для Browserless (например, `vfs_secret_token_123`)
+   - `OPENAI_API_KEY`, `TG_BOT_TOKEN`, `TG_CHAT_IDS`
+   - `MAIN_EMAIL`, `MAIN_PASSWORD` *(с галочкой **"Is Literal"**)*
+   - `DONOR_ACCOUNTS` *(с галочкой **"Is Literal"**)*
+   - `USER_DATA_JSON` *(с галочкой **"Is Literal"**)*
+4. Нажмите **Deploy**. Coolify автоматически поднимет Browserless и соберёт бота, связав их по внутренней сети `ws://browserless:3000`.
+
+---
+
+### Способ 2: Отдельный воркер через Dockerfile
+
 1. **Создайте сервис Browserless**:
    - В Coolify выберите проект -> **New Service** / **Docker Image** -> `ghcr.io/browserless/chromium:latest`.
    - В настройках Environment Variables задайте:
@@ -97,14 +114,14 @@ visa-slot/
 
 2. **Создайте приложение воркера бота**:
    - В том же проекте и том же **Destination** (одна Docker-сеть с browserless) выберите **New Resource** -> **Application** -> **Private/Public Repository**.
-   - Укажите репозиторий с ботом и ветку.
+   - Укажите репозиторий: `https://github.com/miramgazy/vi-slot.git` (ветка `main`).
    - **Build Pack**: выберите **Dockerfile**.
    - **Domains / Ports**: оставьте пустыми (бот является фоновым воркером и не слушает входящий HTTP-трафик).
-   - **Health Checks**: **ОТКЛЮЧИТЕ** (Disable Healthcheck), так как приложение не слушает HTTP-порт.
+   - **Health Checks**: **ОТКЛЮЧИТЕ** (Disable Healthcheck).
 
 3. **Заполните переменные окружения в Coolify**:
    - Скопируйте список переменных из `.env.example`.
-   - **КРИТИЧЕСКИ ВАЖНО**: Для переменных `MAIN_PASSWORD` и паролей в `DONOR_ACCOUNTS` (особенно если они содержат символы `$`, `!`, `@`), включите чекбокс **"Is Literal"** в интерфейсе Coolify. Без этого Coolify попытается интерполировать символы `$` как переменные окружения, что сломает пароли!
+   - **КРИТИЧЕСКИ ВАЖНО**: Для переменных `MAIN_PASSWORD` и паролей в `DONOR_ACCOUNTS` (особенно если они содержат символы `$`, `!`, `@`), включите чекбокс **"Is Literal"** в интерфейсе Coolify.
 
 4. **Запуск и логи**:
    - Нажмите **Deploy**.

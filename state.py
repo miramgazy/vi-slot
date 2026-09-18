@@ -104,6 +104,10 @@ class BotState:
         if not self.state_file_path:
             return
         try:
+            dir_name = os.path.dirname(self.state_file_path)
+            if dir_name:
+                os.makedirs(dir_name, exist_ok=True)
+
             data = {
                 "current_donor_idx": self.current_donor_idx,
                 "checks_count": self.checks_count,

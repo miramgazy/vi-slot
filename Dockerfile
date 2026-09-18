@@ -23,6 +23,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копирование исходного кода приложения
 COPY --chown=appuser:appuser . .
 
+# Создание директории для персистентного хранения данных с правами appuser
+RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
+
 # Переключение на непривилегированного пользователя
 USER appuser
 

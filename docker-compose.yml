@@ -1,0 +1,47 @@
+services:
+  browserless:
+    image: ghcr.io/browserless/chromium:latest
+    restart: unless-stopped
+    environment:
+      - TOKEN=${BROWSERLESS_TOKEN:-vfs_secret_token_123}
+      - TIMEOUT=86400000
+      - CONCURRENT=2
+      - PRE_BOOT_CHROME=true
+      - KEEP_ALIVE=true
+      - EXIT_ON_HEALTH_FAILURE=true
+    shm_size: 2gb
+    # В Coolify порт можно не пробрасывать наружу, либо открыть 3000 для просмотра Live View
+    ports:
+      - "3000:3000"
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - browserless
+    environment:
+      # Подключение к browserless через внутреннее имя сервиса docker compose
+      - BROWSERLESS_WS=ws://browserless:3000/chromium?token=${BROWSERLESS_TOKEN:-vfs_secret_token_123}&timeout=86400000
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TG_BOT_TOKEN=${TG_BOT_TOKEN}
+      - TG_CHAT_IDS=${TG_CHAT_IDS}
+      - MAIN_EMAIL=${MAIN_EMAIL}
+      - MAIN_PASSWORD=${MAIN_PASSWORD}
+      - DONOR_ACCOUNTS=${DONOR_ACCOUNTS}
+      - USER_DATA_JSON=${USER_DATA_JSON}
+      - ROUNDS_BEFORE_ROTATION=${ROUNDS_BEFORE_ROTATION:-3}
+      - ROUND_DELAY_MIN=${ROUND_DELAY_MIN:-180}
+      - ROUND_DELAY_MAX=${ROUND_DELAY_MAX:-300}
+      - CITY_DELAY_MIN=${CITY_DELAY_MIN:-15}
+      - CITY_DELAY_MAX=${CITY_DELAY_MAX:-25}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - SLOT_PAUSE_MINUTES=${SLOT_PAUSE_MINUTES:-60}
+      - BROWSERLESS_DEBUG_URL=${BROWSERLESS_DEBUG_URL:-}
+      - STATE_FILE_PATH=/app/data/state.json
+    volumes:
+      - bot_data:/app/data
+
+volumes:
+  bot_data:
