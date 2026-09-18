@@ -1,0 +1,8 @@
+# Core dependencies for VFS Slot Monitor
+playwright==1.60.0
+httpx==0.28.1
+openai==2.48.0
+
+# Testing dependencies
+pytest==8.4.2
+pytest-asyncio==1.2.0
