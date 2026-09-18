@@ -75,3 +75,19 @@ def test_mask_secret():
     assert mask_secret("ab", 4) == "***"
     assert mask_secret("", 4) == "<not set>"
     assert mask_secret(None, 4) == "<not set>"
+
+
+def test_load_config_check_interval_minutes(monkeypatch):
+    env = get_valid_env()
+    env["CHECK_INTERVAL_MINUTES"] = "10"
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
+
+    cfg = load_config(env_file=None)
+    assert cfg.check_interval_minutes == 10.0
+    # 10 мин = 600с, разброс +/- 60с
+    assert cfg.round_delay_min == 540.0
+    assert cfg.round_delay_max == 660.0
+    summary = cfg.safe_summary()
+    assert summary["check_interval"] == "10.0 мин"
+

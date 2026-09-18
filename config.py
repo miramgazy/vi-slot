@@ -86,9 +86,15 @@ class Config:
     slot_pause_minutes: int = 60
     browserless_debug_url: str = ""
     state_file_path: str = "state.json"
+    check_interval_minutes: Optional[float] = None
 
     def safe_summary(self) -> Dict[str, Any]:
         """Возвращает безопасное представление конфигурации без секретов."""
+        interval_desc = (
+            f"{self.check_interval_minutes} мин"
+            if self.check_interval_minutes is not None
+            else f"{self.round_delay_min / 60:.1f}–{self.round_delay_max / 60:.1f} мин"
+        )
         return {
             "browserless_ws": mask_secret(self.browserless_ws, 12),
             "openai_api_key": mask_secret(self.openai_api_key, 7),
@@ -100,8 +106,9 @@ class Config:
             "donor_emails": [d.email for d in self.donor_accounts],
             "applicant": f"{self.user_data.get('first_name', '')} {self.user_data.get('last_name', '')}".strip(),
             "rounds_before_rotation": self.rounds_before_rotation,
-            "round_delay_range": f"{self.round_delay_min}-{self.round_delay_max}s",
-            "city_delay_range": f"{self.city_delay_min}-{self.city_delay_max}s",
+            "check_interval": interval_desc,
+            "round_delay_range": f"{self.round_delay_min:.0f}–{self.round_delay_max:.0f}s",
+            "city_delay_range": f"{self.city_delay_min:.0f}–{self.city_delay_max:.0f}s",
             "log_level": self.log_level,
             "slot_pause_minutes": self.slot_pause_minutes,
             "browserless_debug_url": self.browserless_debug_url or "<not configured>",
@@ -184,15 +191,29 @@ def load_config(env_file: Optional[str] = ".env", exit_on_error: bool = False) -
     except ValueError:
         rounds_before_rotation = 3
 
-    try:
-        round_delay_min = float(os.getenv("ROUND_DELAY_MIN", "180"))
-    except ValueError:
-        round_delay_min = 180.0
+    check_interval_minutes: Optional[float] = None
+    check_interval_raw = os.getenv("CHECK_INTERVAL_MINUTES", "").strip()
+    if check_interval_raw:
+        try:
+            check_interval_minutes = float(check_interval_raw)
+            base_sec = check_interval_minutes * 60.0
+            jitter = max(15.0, base_sec * 0.1)
+            round_delay_min = max(10.0, base_sec - jitter)
+            round_delay_max = base_sec + jitter
+        except ValueError:
+            check_interval_minutes = None
+            round_delay_min = 180.0
+            round_delay_max = 300.0
+    else:
+        try:
+            round_delay_min = float(os.getenv("ROUND_DELAY_MIN", "180"))
+        except ValueError:
+            round_delay_min = 180.0
 
-    try:
-        round_delay_max = float(os.getenv("ROUND_DELAY_MAX", "300"))
-    except ValueError:
-        round_delay_max = 300.0
+        try:
+            round_delay_max = float(os.getenv("ROUND_DELAY_MAX", "300"))
+        except ValueError:
+            round_delay_max = 300.0
 
     try:
         city_delay_min = float(os.getenv("CITY_DELAY_MIN", "15"))
@@ -234,4 +255,5 @@ def load_config(env_file: Optional[str] = ".env", exit_on_error: bool = False) -
         slot_pause_minutes=slot_pause_minutes,
         browserless_debug_url=browserless_debug_url,
         state_file_path=state_file_path,
+        check_interval_minutes=check_interval_minutes,
     )
